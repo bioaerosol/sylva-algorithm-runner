@@ -1,0 +1,16 @@
+src/debian/debhelper-build-stamp
+src/debian/files
+src/debian/sylva-algorithm-runner.debhelper.log
+src/debian/sylva-algorithm-runner.substvars
+src/debian/*.debhelper
+src/debian/sylva-algorithm-runner
+
+.venv
+.vscode
+
+**/__pycache__/
+**/*.egg-info
+
+sylva-algorithm-runner*.deb
+sylva-algorithm-runner*.buildinfo
+sylva-algorithm-runner*.changes
