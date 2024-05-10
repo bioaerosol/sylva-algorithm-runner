@@ -1,12 +1,11 @@
 import requests
-import yaml
 
 from sylva_algorithm_runner import AlgorithmRunOrder
 
 class GitHubRepository:
     configuration = None
 
-    def __init__(self, github_configuration: dict) -> None:        
+    def __init__(self, github_configuration: dict = None) -> None:        
         self.configuration = github_configuration
 
     def __read_api(self, path):
@@ -24,8 +23,8 @@ class GitHubRepository:
                 'X-GitHub-Api-Version': '2022-11-28',
                 'Accept': 'application/vnd.github.raw+json'
             }
-            return yaml.safe_load(requests.get(f'{path}', headers=headers).text)
-        except Exception as e:        
+            return requests.get(f'{path}', headers=headers).text
+        except Exception as e:
             return None
 
     def __get_yamls(self, tree):
@@ -49,7 +48,27 @@ class GitHubRepository:
         
         algorithmRunOrders = []
         for id, blob in blobs.items():
-            algorithmOrder = AlgorithmRunOrder(id, blob)
+            algorithmOrder = AlgorithmRunOrder.from_source(id, blob)
             algorithmRunOrders.append(algorithmOrder)
 
         return algorithmRunOrders
+    
+    def __read_public_api(self, path):
+        headers = {            
+            'X-GitHub-Api-Version': '2022-11-28',
+            'Accept': 'application/vnd.github+json'
+        }
+        return requests.get(f'{path}', headers=headers).json()
+
+    def get_tag_for_public_release(self, repository, version) -> str:
+        response = self.__read_public_api(f"https://api.github.com/repos/{repository}/releases")
+        
+        try: 
+            for entry in response:
+                if entry["tag_name"] == version:
+                    return entry["tag_name"]
+        except:
+            # no-op by intention, we just pass to return None
+            pass
+            
+        return None

@@ -1,5 +1,6 @@
 
-from sylva_algorithm_runner import AlgorithmRunOrder
+from sylva_algorithm_runner import AlgorithmRunOrder, AlgorithmRunOrderStatus
+from bson import ObjectId
 from pymongo import MongoClient
 
 class DatabaseRepository:
@@ -22,3 +23,14 @@ class DatabaseRepository:
             added = True
 
         return added
+    
+    def get_algorithm_run_order_in_status_created(self, id: str):
+        try: 
+            object = self.__get_algorithm_run_order_collection().find_one({"_id": ObjectId(id), "status": AlgorithmRunOrderStatus.CREATED.value})
+        except Exception as e:
+            object = None
+
+        return AlgorithmRunOrder.from_dict(object) if object is not None else None
+    
+    def update_algorithm_run_order_status(self, id: str, status: AlgorithmRunOrderStatus):
+        self.__get_algorithm_run_order_collection().update_one({"_id": ObjectId(id)}, {"$set": {"status": status.value}})
