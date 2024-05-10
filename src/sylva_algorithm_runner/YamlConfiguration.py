@@ -10,5 +10,5 @@ class YamlConfiguration():
         with open(configuration_file, 'r') as cf:
             self.__configuration = yaml.load(cf, Loader=yaml.FullLoader)
 
-    def get(self, attributes: List[str]) -> Any:
-        return reduce(operator.getitem, attributes, self.__configuration)
+    def get(self, *kwargs) -> Any:
+        return reduce(operator.getitem, kwargs, self.__configuration)

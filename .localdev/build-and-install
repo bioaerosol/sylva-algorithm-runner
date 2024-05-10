@@ -1,0 +1,4 @@
+#!/bin/bash
+cd ../src
+dpkg-buildpackage -b && sudo dpkg -i ../sylva-algorithm-runner_*_all.deb
+cd ..

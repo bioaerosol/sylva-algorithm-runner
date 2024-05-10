@@ -1,2 +1,8 @@
-repo: bioaerosol/sylva-algorithm-runner-configs
-githubpat: 
+github:
+  repository: bioaerosol/sylva-algorithm-runner-configs
+  token: changeit
+database:
+  host: localhost
+  port: 27017
+  user: sylva
+  password: changeit
