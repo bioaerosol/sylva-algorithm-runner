@@ -6,3 +6,5 @@ database:
   port: 27017
   user: sylva
   password: changeit
+runner:
+  path: changeit

@@ -27,6 +27,7 @@ override_dh_auto_install:
 override_dh_install:
 	dh_install scripts/* /usr/bin
 	dh_install etc
+	dh_install var
 
 #override_dh_install:
 #	dh_install scripts/* /usr/bin

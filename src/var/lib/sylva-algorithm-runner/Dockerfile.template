@@ -1,0 +1,3 @@
+FROM {{pid}}-algorithm:latest
+
+CMD ["startAlgorithm"]
