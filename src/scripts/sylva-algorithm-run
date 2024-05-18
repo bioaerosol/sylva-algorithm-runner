@@ -20,7 +20,7 @@ log_repository = LogRepository(configuration.get("database"))
 public_github_repository = GitHubRepository()
 
 process_id = str(uuid.uuid4())
-print("{0} - {1} - START - Loading algorithm run oder with id {2}.".format(datetime.now().isoformat(), process_id, args.id))
+print("{0} - {1} - START - Loading algorithm run order with id {2}.".format(datetime.now().isoformat(), process_id, args.id))
 
 algorithm_run_order = database_repository.get_algorithm_run_order_in_status_created(args.id)
 
@@ -33,7 +33,7 @@ else:
         # qualified for running
         algorithm_runner = AlgorithmRunner(configuration.get("runner"), process_id, log_repository)
         algorithm_runner.run(algorithm_run_order)
-        algorithm_runner.clean()
+
     else:
         print("{0} - {1} - ERROR - Algorithm run order with id {2} is not valid.".format(datetime.now().isoformat(), process_id, args.id))
         database_repository.update_algorithm_run_order_status(args.id, AlgorithmRunOrderStatus.INVALID)

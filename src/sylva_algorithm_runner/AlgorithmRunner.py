@@ -53,6 +53,7 @@ class AlgorithmRunner:
         section_success = self.__run_and_log_section(RunSection.CLONE, clone_command)
         
         if not section_success:
+            self.__clean()
             self.log_repository.end_run(self.pid, Status.FAILURE)
             return
         
@@ -61,6 +62,7 @@ class AlgorithmRunner:
         section_success = self.__run_and_log_section(RunSection.BUILD_ALGORITHM_IMAGE, docker_build_algorithm_image)
         
         if not section_success:
+            self.__clean()
             self.log_repository.end_run(self.pid, Status.FAILURE)
             return
         
@@ -79,6 +81,7 @@ class AlgorithmRunner:
                 section_success = self.__run_and_log_section(RunSection.BUILD_ALGORITHM_RUN_IMAGE, docker_build_algorithm_run_image)
 
         if not section_success:
+            self.__clean()
             self.log_repository.end_run(self.pid, Status.FAILURE)
             return
         
@@ -88,21 +91,25 @@ class AlgorithmRunner:
         # Get the results
         #TODO
 
-        self.log_repository.end_run(self.pid, Status.SUCCESS)
-        return True
+        # last step: clean-up
+        section_success = self.__clean()
+        self.log_repository.end_run(self.pid, Status.SUCCESS if section_success else Status.FAILURE)
+        
+        return section_success
 
 
-    def clean(self):
+    def __clean(self):
         """ Cleans up after running an algorithm. Removes the working directory and the docker images. """
-        shutil.rmtree(self.working_dir)
 
         remove_algorithm_image = ["docker", "rmi", self.algorithm_docker_image_name]
-        success = self.__run_and_log_section(RunSection.CLEANUP, remove_algorithm_image)
+        success1 = self.__run_and_log_section(RunSection.CLEANUP, remove_algorithm_image)
         
         remove_algorithm_run_image = ["docker", "rmi", self.run_docker_image_name]
-        success = success and self.__run_and_log_section(RunSection.CLEANUP, remove_algorithm_run_image)
+        success2 = self.__run_and_log_section(RunSection.CLEANUP, remove_algorithm_run_image)
         
-        return success
+        shutil.rmtree(self.working_dir)
+
+        return success1 and success2
 
 
     def __run_and_log_section(self, run_section: RunSection, command: list) -> bool:
