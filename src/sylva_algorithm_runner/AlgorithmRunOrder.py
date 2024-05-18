@@ -8,6 +8,8 @@ class AlgorithmRunOrderStatus(Enum):
     INVALID = "INVALID"
 
 class AlgorithmRunOrder():
+    """ Class to represent an order to run an algorithm. Basically a mapping between database document and Python object. """
+    _id: str = None
     status = AlgorithmRunOrderStatus.CREATED
 
     sourceId: str
@@ -19,16 +21,20 @@ class AlgorithmRunOrder():
 
     datasetId: str = None
 
-    def __init__(self, source_id: str, source: dict, algorithm: str, algorithm_repository: str, algorithm_version: str, dataset_id: str) -> None:
+
+    def __init__(self, source_id: str, source: dict, algorithm: str, algorithm_repository: str, algorithm_version: str, dataset_id: str, _id: str = None) -> None:
         self.sourceId = source_id
         self.source = source
         self.algorithm = algorithm
         self.algorithmRepository = algorithm_repository
         self.algorithmVersion = algorithm_version
         self.datasetId = dataset_id
+        self._id = _id
+
 
     def is_valid(self) -> bool:
         return self.algorithm is not None and self.algorithmRepository is not None and self.algorithmVersion is not None and self.datasetId is not None
+
 
     def to_dict(self) -> dict:
         return {
@@ -41,6 +47,7 @@ class AlgorithmRunOrder():
             'datasetId': self.datasetId
         }
     
+
     @staticmethod
     def from_dict(data: dict) -> 'AlgorithmRunOrder':
         source_id = data.get('sourceId')
@@ -51,8 +58,10 @@ class AlgorithmRunOrder():
         algorithm_version = data.get('algorithmVersion')
 
         dataset_id = data.get('datasetId')
+        _id = data.get('_id')
 
-        return AlgorithmRunOrder(source_id, source, algorithm, algorithm_repository, algorithm_version, dataset_id)
+        return AlgorithmRunOrder(source_id, source, algorithm, algorithm_repository, algorithm_version, dataset_id, _id)
+    
     
     @staticmethod
     def from_source(source_id: str, source: str) -> None:

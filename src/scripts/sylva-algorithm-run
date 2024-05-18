@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 
 from sylva_algorithm_runner import YamlConfiguration, AlgorithmRunOrderStatus, AlgorithmRunner
-from sylva_algorithm_runner.repositories import DatabaseRepository, GitHubRepository
+from sylva_algorithm_runner.repositories import DatabaseRepository, GitHubRepository, LogRepository
 
 parser = argparse.ArgumentParser(description="""Runs an algorithm.""")
 
@@ -15,6 +15,7 @@ args = parser.parse_args()
 
 configuration = YamlConfiguration("/etc/sylva-algorithm-runner/config.yaml")
 database_repository = DatabaseRepository(configuration.get("database"))
+log_repository = LogRepository(configuration.get("database"))
 
 public_github_repository = GitHubRepository()
 
@@ -30,7 +31,7 @@ else:
     tag_for_release = public_github_repository.get_tag_for_public_release(algorithm_run_order.algorithmRepository, algorithm_run_order.algorithmVersion)
     if (algorithm_run_order.is_valid() and tag_for_release is not None):
         # qualified for running
-        algorithm_runner = AlgorithmRunner(configuration.get("runner"), process_id)
+        algorithm_runner = AlgorithmRunner(configuration.get("runner"), process_id, log_repository)
         algorithm_runner.run(algorithm_run_order)
         algorithm_runner.clean()
     else:

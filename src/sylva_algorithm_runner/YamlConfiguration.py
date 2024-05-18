@@ -1,9 +1,10 @@
 import yaml
-from typing import List, Any
+from typing import Any
 from functools import reduce
 import operator
 
 class YamlConfiguration():
+    """ Class to read a yaml configuration file and return the values of the keys. """
     __configuration = []
 
     def __init__(self, configuration_file) -> None:
