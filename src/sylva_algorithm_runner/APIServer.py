@@ -1,7 +1,9 @@
 from bottle import Bottle
-from . import DatabaseResource
 
-class Server:
+def dummyCallback():
+    return { "response": "Hello World" }
+
+class APIServer:
     def create_application(self, before_request_hook=None, after_request_hook=None):
         app = Bottle()
 
@@ -11,7 +13,6 @@ class Server:
         if after_request_hook is not None:
             app.add_hook("after_request", after_request_hook)
 
-        database_resource = DatabaseResource()
-        app.route("/runOrders", method="GET", callback=database_resource.get_run_orders)
+        app.route("/runOrders", method="GET", callback=dummyCallback)
 
         return app
