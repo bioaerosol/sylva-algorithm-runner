@@ -14,3 +14,5 @@ src/debian/sylva-algorithm-runner
 sylva-algorithm-runner*.deb
 sylva-algorithm-runner*.buildinfo
 sylva-algorithm-runner*.changes
+
+build

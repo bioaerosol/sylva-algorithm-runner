@@ -18,6 +18,7 @@ override_dh_auto_build:
 	dh_auto_build
 	pip3 install --no-compile -r requirements.txt
 	python3 setup.py build
+#	cd frontend; npm install; npm run build
 
 override_dh_auto_install:
 	dh_auto_install
