@@ -1,5 +1,5 @@
 from bottle import response
-from sylva_algorithm_runner.APIServer import APIServer
+from sylva_algorithm_runner.api.APIServer import APIServer
 
 def after_request_callback():
     response.headers['Access-Control-Allow-Origin'] = '*'

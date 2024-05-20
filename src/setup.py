@@ -11,7 +11,9 @@ setup(
     install_requires=[
         "pyyaml==6.0.1",
         "requests==2.31.0",
-        "pymongo==4.7.2"
+        "pymongo==4.7.2",
+        "bottle==0.12.25",
+        "python-dateutil==2.8.0"
     ],
     tests_require=[],
     version=sylva_algorithm_runner.__version__,

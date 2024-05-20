@@ -23,9 +23,14 @@ class DatabaseRepository:
             added = True
 
         return added
-    
 
-    def get_algorithm_run_order_in_status_created(self, id: str):
+
+    def get_algorithm_run_orders_raw(self, projection = None) -> list:
+        """ Returns all algorithm run orders. """
+        return list(self.__get_algorithm_run_order_collection().find({}, projection=projection))
+
+
+    def get_algorithm_run_order_in_status_created(self, id: str) -> AlgorithmRunOrder:
         """ Returns the algorithm run order with the given id if it is in status CREATED. """
         try: 
             object = self.__get_algorithm_run_order_collection().find_one({"_id": ObjectId(id), "status": AlgorithmRunOrderStatus.CREATED.value})

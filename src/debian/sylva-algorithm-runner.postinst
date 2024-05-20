@@ -1,5 +1,5 @@
 #!/bin/sh
-# postinst script for epin-etl
+# postinst script for sylva-algorithm-runner
 #
 # see: dh_installdeb(1)
 
@@ -22,6 +22,9 @@ case "$1" in
     configure)
     id -u sylva >/dev/null 2>&1 || adduser -u 4225293 --system --shell /bin/bash --group sylva
     sudo usermod -aG docker sylva
+
+    ln -fs /etc/apache2/sites-available/sylva-algorithm-runner.conf /etc/apache2/sites-enabled/sylva-algorithm-runner.conf
+    service apache2 reload
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

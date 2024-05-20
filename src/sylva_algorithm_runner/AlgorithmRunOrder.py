@@ -19,7 +19,7 @@ class AlgorithmRunOrder():
     algorithmRepository: str = None
     algorithmVersion: str = None
 
-    datasetId: str = None
+    dataset: str = None
 
 
     def __init__(self, source_id: str, source: dict, algorithm: str, algorithm_repository: str, algorithm_version: str, dataset_id: str, _id: str = None) -> None:
@@ -28,12 +28,12 @@ class AlgorithmRunOrder():
         self.algorithm = algorithm
         self.algorithmRepository = algorithm_repository
         self.algorithmVersion = algorithm_version
-        self.datasetId = dataset_id
+        self.dataset = dataset_id
         self._id = _id
 
 
     def is_valid(self) -> bool:
-        return self.algorithm is not None and self.algorithmRepository is not None and self.algorithmVersion is not None and self.datasetId is not None
+        return self.algorithm is not None and self.algorithmRepository is not None and self.algorithmVersion is not None and self.dataset is not None
 
 
     def to_dict(self) -> dict:
@@ -44,7 +44,7 @@ class AlgorithmRunOrder():
             'algorithm': self.algorithm,
             'algorithmRepository': self.algorithmRepository,
             'algorithmVersion': self.algorithmVersion,
-            'datasetId': self.datasetId
+            'dataset': self.dataset
         }
     
 
@@ -57,7 +57,7 @@ class AlgorithmRunOrder():
         algorithm_repository = data.get('algorithmRepository')
         algorithm_version = data.get('algorithmVersion')
 
-        dataset_id = data.get('datasetId')
+        dataset_id = data.get('dataset')
         _id = data.get('_id')
 
         return AlgorithmRunOrder(source_id, source, algorithm, algorithm_repository, algorithm_version, dataset_id, _id)
@@ -68,7 +68,7 @@ class AlgorithmRunOrder():
         algorithm = None
         algorithmRepository = None
         algorithmVersion = None
-        datasetId = None
+        dataset = None
 
         try:
             yaml_source = yaml.safe_load(source)
@@ -79,10 +79,10 @@ class AlgorithmRunOrder():
                 algorithmVersion = yaml_source['algorithm']['version']
 
             if 'dataset' in yaml_source:
-                datasetId = yaml_source['dataset']['id']
+                dataset = yaml_source['dataset']['id']
 
         except Exception as e:
             # no-op by intention
             pass
 
-        return AlgorithmRunOrder(source_id, source, algorithm, algorithmRepository, algorithmVersion, datasetId)
+        return AlgorithmRunOrder(source_id, source, algorithm, algorithmRepository, algorithmVersion, dataset)
