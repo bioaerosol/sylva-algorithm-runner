@@ -15,7 +15,7 @@ args = parser.parse_args()
 
 configuration = YamlConfiguration("/etc/sylva-algorithm-runner/config.yaml")
 database_repository = DatabaseRepository(configuration.get("database"))
-log_repository = LogRepository(configuration.get("database"))
+log_repository = LogRepository(configuration.get("database"), True)
 
 public_github_repository = GitHubRepository()
 

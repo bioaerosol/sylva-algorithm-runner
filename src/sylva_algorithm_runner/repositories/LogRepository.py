@@ -5,10 +5,12 @@ class LogRepository:
     """ Class to handle logging of algorithm runs. """
     configuration = None
     mongo_client = None
+    log_to_stdout = False
 
-    def __init__(self, database_configuration: dict) -> None:
+    def __init__(self, database_configuration: dict, log_to_stdout: bool = False) -> None:
         self.configuration = database_configuration
         self.mongo_client = MongoClient(self.configuration["host"], port=self.configuration["port"], username=self.configuration["user"], password=self.configuration["password"], authSource="admin", tz_aware=True)
+        self.log_to_stdout = log_to_stdout
 
     def __get_algorithm_runs_collection(self):
         return self.mongo_client.sylva.algorithmRuns
@@ -25,6 +27,9 @@ class LogRepository:
         )
 
     def append_log(self, pid: str, run_section: object, log_line: str):
+        if (self.log_to_stdout):
+            print(log_line)
+        
         algorithm_runs_collection = self.__get_algorithm_runs_collection()
         algorithm_runs_collection.update_one(
             {"pid": pid },

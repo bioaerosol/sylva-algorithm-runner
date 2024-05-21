@@ -14,7 +14,10 @@ class RunSection(Enum):
     BUILD_ALGORITHM_IMAGE = "BUILD_ALGORITHM_IMAGE"
     BUILD_ALGORITHM_RUN_IMAGE = "BUILD_ALGORITHM_RUN_IMAGE"
     CLEANUP = "CLEANUP"
-
+    START = "START"
+    RUN_ALGORITHM = "RUN_ALGORITHM"
+    COPY_OUTPUT = "COPY_OUTPUT"
+    CLEANUP_CONTAINER = "CLEANUP_CONTAINER"
 
 class Status(Enum):
     """ Enum for the different statuses of processes. """
@@ -48,68 +51,88 @@ class AlgorithmRunner:
 
         self.log_repository.start_run(self.pid)
 
-        # Clone algorithm from foreign repository
-        clone_command = ["git", "clone", "-c", "advice.detachedHead=false", "--branch", f"{repo_tag}", f"https://github.com/{repo_name}.git", f"{self.working_dir}"]
-        section_success = self.__run_and_log_section(RunSection.CLONE, clone_command)
+        try:
+            # Clone algorithm from foreign repository
+            clone_command = ["git", "clone", "-c", "advice.detachedHead=false", "--branch", f"{repo_tag}", f"https://github.com/{repo_name}.git", f"{self.working_dir}"]
+            section_success = self.__run_and_log_section(RunSection.CLONE, clone_command)
+            
+            if not section_success:
+                self.__clean()
+                self.log_repository.end_run(self.pid, Status.FAILURE)
+                return
+            
+            # Build algorithm docker image
+            docker_build_algorithm_image = ["docker", "build", "-t", self.algorithm_docker_image_name, "."]
+            section_success = self.__run_and_log_section(RunSection.BUILD_ALGORITHM_IMAGE, docker_build_algorithm_image)
+            
+            if not section_success:
+                self.__clean()
+                self.log_repository.end_run(self.pid, Status.FAILURE)
+                return
+            
+            # Build run docker image (based on algorithm docker image + own extension to make it work); Dockerfile for this is part of this package
+            with open('/var/lib/sylva-algorithm-runner/Dockerfile.template', 'r') as file:
+                dockerfile_template = file.read()
+
+            dockerfile_content = dockerfile_template.replace('{{pid}}', self.pid)
+
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                with open(os.path.join(tmpdirname, "Dockerfile"), "w") as dockerfile:
+                    dockerfile.write(dockerfile_content)
+                    dockerfile.flush()
+                    
+                    docker_build_algorithm_run_image = ["docker", "build", "-t", self.run_docker_image_name, tmpdirname]
+                    section_success = self.__run_and_log_section(RunSection.BUILD_ALGORITHM_RUN_IMAGE, docker_build_algorithm_run_image)
+
+            if not section_success:
+                self.__clean()
+                self.log_repository.end_run(self.pid, Status.FAILURE)
+                return
+            
+            # Run the algorithm
+            docker_run = ["docker", "run", "-d", "--name", "algorithm_container", self.run_docker_image_name]
+            section_success = self.__run_and_log_section(RunSection.START, docker_run)
+            if not section_success:
+                raise Exception()
+            
+            docker_run = ["docker", "logs", "--follow", "algorithm_container"]
+            section_success = self.__run_and_log_section(RunSection.RUN_ALGORITHM, docker_run)
+            if not section_success:
+                raise Exception()
+            
+            docker_run = ["docker", "wait", "algorithm_container"]
+            section_success = self.__run_and_log_section(RunSection.RUN_ALGORITHM, docker_run)
+            if not section_success:
+                raise Exception()
+
+            # Get the results
+            #TODO
+
+            # last step: clean-up
+            section_success = self.__clean()
+            self.log_repository.end_run(self.pid, Status.SUCCESS if section_success else Status.FAILURE)
+            
+            return section_success
         
-        if not section_success:
+        except:
             self.__clean()
             self.log_repository.end_run(self.pid, Status.FAILURE)
-            return
-        
-        # Build algorithm docker image
-        docker_build_algorithm_image = ["docker", "build", "-t", self.algorithm_docker_image_name, "."]
-        section_success = self.__run_and_log_section(RunSection.BUILD_ALGORITHM_IMAGE, docker_build_algorithm_image)
-        
-        if not section_success:
-            self.__clean()
-            self.log_repository.end_run(self.pid, Status.FAILURE)
-            return
-        
-        # Build run docker image (based on algorithm docker image + own extension to make it work); Dockerfile for this is part of this package
-        with open('/var/lib/sylva-algorithm-runner/Dockerfile.template', 'r') as file:
-            dockerfile_template = file.read()
-
-        dockerfile_content = dockerfile_template.replace('{{pid}}', self.pid)
-
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            with open(os.path.join(tmpdirname, "Dockerfile"), "w") as dockerfile:
-                dockerfile.write(dockerfile_content)
-                dockerfile.flush()
-                
-                docker_build_algorithm_run_image = ["docker", "build", "-t", self.run_docker_image_name, tmpdirname]
-                section_success = self.__run_and_log_section(RunSection.BUILD_ALGORITHM_RUN_IMAGE, docker_build_algorithm_run_image)
-
-        if not section_success:
-            self.__clean()
-            self.log_repository.end_run(self.pid, Status.FAILURE)
-            return
-        
-        # Run the algorithm
-        #TODO
-
-        # Get the results
-        #TODO
-
-        # last step: clean-up
-        section_success = self.__clean()
-        self.log_repository.end_run(self.pid, Status.SUCCESS if section_success else Status.FAILURE)
-        
-        return section_success
 
 
     def __clean(self):
         """ Cleans up after running an algorithm. Removes the working directory and the docker images. """
+        remove_algorithm_container = ["docker", "rm", "algorithm_container"]
+        success3 = self.__run_and_log_section(RunSection.CLEANUP, remove_algorithm_container)
+
+        remove_algorithm_run_image = ["docker", "rmi", self.run_docker_image_name]
+        success2 = self.__run_and_log_section(RunSection.CLEANUP, remove_algorithm_run_image)
 
         remove_algorithm_image = ["docker", "rmi", self.algorithm_docker_image_name]
         success1 = self.__run_and_log_section(RunSection.CLEANUP, remove_algorithm_image)
-        
-        remove_algorithm_run_image = ["docker", "rmi", self.run_docker_image_name]
-        success2 = self.__run_and_log_section(RunSection.CLEANUP, remove_algorithm_run_image)
-        
+                
         shutil.rmtree(self.working_dir)
 
-        return success1 and success2
+        return success1 and success2 and success3
 
 
     def __run_and_log_section(self, run_section: RunSection, command: list) -> bool:
