@@ -6,10 +6,12 @@ from enum import Enum
 
 from sylva_algorithm_runner import AlgorithmRunOrder
 from sylva_algorithm_runner.repositories.LogRepository import LogRepository
+import json
 
 
 class RunSection(Enum):
     """ Enum for the different sections (aka steps) of an algorithm run. """
+    ORDER_DATA = "ORDER_DATA"
     CLONE = "CLONE"
     BUILD_ALGORITHM_IMAGE = "BUILD_ALGORITHM_IMAGE"
     BUILD_ALGORITHM_RUN_IMAGE = "BUILD_ALGORITHM_RUN_IMAGE"
@@ -33,14 +35,16 @@ class AlgorithmRunner:
     log_repository = None
     algorithm_docker_image_name = None
     run_docker_image_name = None
+    dataportal_configuration = None
 
 
-    def __init__(self, configuration, pid, log_repository: LogRepository): 
+    def __init__(self, runner_configuration, dataportal_configuration, pid, log_repository: LogRepository): 
         self.pid = pid
         self.log_repository = log_repository
         self.algorithm_docker_image_name = f"{self.pid}-algorithm:latest"
         self.run_docker_image_name = f"{self.pid}-run:latest"
-        self.working_dir = os.path.join(configuration["path"], self.pid)
+        self.working_dir = os.path.join(runner_configuration["path"], self.pid)
+        self.dataportal_configuration = dataportal_configuration
 
 
     def run(self, algorithm_run_order: AlgorithmRunOrder):
@@ -54,6 +58,17 @@ class AlgorithmRunner:
         self.log_repository.start_run()
 
         try:
+            # start with ordering data as this may take some minutes
+            curl_command = ["curl", "-s", "-X", "POST", self.dataportal_configuration["workspace"], "-H", "Content-Type: application/json", "-d", json.dumps({"dataset": algorithm_run_order.dataset, "token": self.dataportal_configuration["token"]})]
+            response = self.__run_and_log_section(RunSection.ORDER_DATA, curl_command, return_response_if_success=True)
+
+            if response == False:
+                raise Exception()
+            else:
+                # response might contain our workspace id
+                workspace_id = json.loads(response)["id"]
+                self.log_repository.log_workspace_id(workspace_id)
+            
             # Clone algorithm from foreign repository
             clone_command = ["git", "clone", "-c", "advice.detachedHead=false", "--branch", f"{repo_tag}", f"https://github.com/{repo_name}.git", f"{self.working_dir}"]
             section_success = self.__run_and_log_section(RunSection.CLONE, clone_command)
@@ -131,13 +146,15 @@ class AlgorithmRunner:
         return success1 and success2 and success3
 
 
-    def __run_and_log_section(self, run_section: RunSection, command: list) -> bool:
+    def __run_and_log_section(self, run_section: RunSection, command: list, return_response_if_success: bool = False):
         """ Runs a command and logs the output to the given run_section in database. """
         self.log_repository.start_section(run_section)
         
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, universal_newlines=True, cwd=self.working_dir, bufsize=1)
 
+        response = ""
         for line in iter(process.stdout.readline, ""):
+            response += line
             self.log_repository.append_log(run_section, line)      
 
         process.communicate()
@@ -146,4 +163,7 @@ class AlgorithmRunner:
 
         self.log_repository.end_section(run_section)
 
-        return process.returncode == 0
+        if return_response_if_success and process.returncode == 0:
+            return response
+        else:
+            return process.returncode == 0

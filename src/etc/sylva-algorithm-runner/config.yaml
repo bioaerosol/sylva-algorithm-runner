@@ -8,3 +8,6 @@ database:
   password: changeit
 runner:
   path: changeit
+dataportal:
+  workspace: https://data.sylva.bioaerosol.eu/api/workspace
+  token: changeit 
