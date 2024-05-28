@@ -13,13 +13,14 @@ parser = argparse.ArgumentParser(description="""Runs an algorithm.""")
 parser.add_argument("id", type=str, help="ID of algorithm run order")
 args = parser.parse_args()
 
+process_id = str(uuid.uuid4())
+
 configuration = YamlConfiguration("/etc/sylva-algorithm-runner/config.yaml")
 database_repository = DatabaseRepository(configuration.get("database"))
-log_repository = LogRepository(configuration.get("database"), True)
+log_repository = LogRepository(configuration.get("database"), process_id, True)
 
 public_github_repository = GitHubRepository()
 
-process_id = str(uuid.uuid4())
 print("{0} - {1} - START - Loading algorithm run order with id {2}.".format(datetime.now().isoformat(), process_id, args.id))
 
 algorithm_run_order = database_repository.get_algorithm_run_order_in_status_created(args.id)

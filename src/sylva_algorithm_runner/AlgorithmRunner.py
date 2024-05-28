@@ -21,8 +21,10 @@ class RunSection(Enum):
 
 class Status(Enum):
     """ Enum for the different statuses of processes. """
+    RUNNING = "RUNNING"
     SUCCESS = "SUCCESS"
     FAILURE = "FAILURE"
+    WAITING_FOR_DATA = "WAITING_FOR_DATA"
 
 
 class AlgorithmRunner:
@@ -49,7 +51,7 @@ class AlgorithmRunner:
 
         os.makedirs(self.working_dir)
 
-        self.log_repository.start_run(self.pid)
+        self.log_repository.start_run()
 
         try:
             # Clone algorithm from foreign repository
@@ -57,18 +59,14 @@ class AlgorithmRunner:
             section_success = self.__run_and_log_section(RunSection.CLONE, clone_command)
             
             if not section_success:
-                self.__clean()
-                self.log_repository.end_run(self.pid, Status.FAILURE)
-                return
+                raise Exception()
             
             # Build algorithm docker image
             docker_build_algorithm_image = ["docker", "build", "-t", self.algorithm_docker_image_name, "."]
             section_success = self.__run_and_log_section(RunSection.BUILD_ALGORITHM_IMAGE, docker_build_algorithm_image)
             
             if not section_success:
-                self.__clean()
-                self.log_repository.end_run(self.pid, Status.FAILURE)
-                return
+                raise Exception()
             
             # Build run docker image (based on algorithm docker image + own extension to make it work); Dockerfile for this is part of this package
             with open('/var/lib/sylva-algorithm-runner/Dockerfile.template', 'r') as file:
@@ -85,9 +83,7 @@ class AlgorithmRunner:
                     section_success = self.__run_and_log_section(RunSection.BUILD_ALGORITHM_RUN_IMAGE, docker_build_algorithm_run_image)
 
             if not section_success:
-                self.__clean()
-                self.log_repository.end_run(self.pid, Status.FAILURE)
-                return
+                raise Exception()
             
             # Run the algorithm
             docker_run = ["docker", "run", "-d", "--name", "algorithm_container", self.run_docker_image_name]
@@ -110,13 +106,13 @@ class AlgorithmRunner:
 
             # last step: clean-up
             section_success = self.__clean()
-            self.log_repository.end_run(self.pid, Status.SUCCESS if section_success else Status.FAILURE)
+            self.log_repository.end_run(Status.SUCCESS if section_success else Status.FAILURE)
             
             return section_success
         
         except:
             self.__clean()
-            self.log_repository.end_run(self.pid, Status.FAILURE)
+            self.log_repository.end_run(Status.FAILURE)
 
 
     def __clean(self):
@@ -137,17 +133,17 @@ class AlgorithmRunner:
 
     def __run_and_log_section(self, run_section: RunSection, command: list) -> bool:
         """ Runs a command and logs the output to the given run_section in database. """
-        self.log_repository.start_section(self.pid, run_section)
+        self.log_repository.start_section(run_section)
         
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, universal_newlines=True, cwd=self.working_dir, bufsize=1)
 
         for line in iter(process.stdout.readline, ""):
-            self.log_repository.append_log(self.pid, run_section, line)      
+            self.log_repository.append_log(run_section, line)      
 
         process.communicate()
         
-        self.log_repository.set_section_status(self.pid, run_section, Status.SUCCESS if process.returncode == 0 else Status.FAILURE)
+        self.log_repository.set_section_status(run_section, Status.SUCCESS if process.returncode == 0 else Status.FAILURE)
 
-        self.log_repository.end_section(self.pid, run_section)
+        self.log_repository.end_section(run_section)
 
         return process.returncode == 0
