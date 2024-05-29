@@ -6,5 +6,5 @@ Debian package that provides all components to manage, run and evaluate algorith
 ## Requirements
 To develop and build this Debian package you need to have installed following requirements:
 - debhelper
-- build-essentials
-- python3
+- build-essential
+- dh-python python3-all python3-pip
