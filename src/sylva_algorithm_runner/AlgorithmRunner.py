@@ -168,7 +168,7 @@ class AlgorithmRunner:
         docker_wait = ["docker", "wait", "algorithm_container"]
         section_success = self.__run_and_log_section(RunSection.WAIT_FOR_ALGORITHM, docker_wait, return_response_if_success=True)
         
-        if section_success == False or section_success != "0":
+        if section_success == False or section_success.strip() != "0":
             # set status of RUN_ALGORITHM manually as __run_and_log_section is not able to detect the exit code
             self.log_repository.end_section(RunSection.RUN_ALGORITHM, Status.FAILURE)
             raise Exception()
