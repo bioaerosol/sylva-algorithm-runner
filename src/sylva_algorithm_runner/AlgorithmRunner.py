@@ -171,7 +171,13 @@ class AlgorithmRunner:
             raise Exception()
         
         # Get the results
-        #TODO
+        output_folder = os.path.join(self.runner_configuration['output'], self.pid)
+        os.makedirs(output_folder)
+        copy_output = ["docker", "cp", "algorithm_container:/data/output/.", output_folder]
+        section_success = self.__run_and_log_section(RunSection.COPY_OUTPUT, copy_output)
+
+        if not section_success:
+            raise Exception()
 
         # last step: clean-up
         section_success = self.__clean()

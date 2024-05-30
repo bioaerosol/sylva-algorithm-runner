@@ -9,6 +9,7 @@ database:
 runner:
   path: changeit
   workspace: /mnt/changeit
+  output: changeit
 dataportal:
   workspace: https://data.sylva.bioaerosol.eu/api/workspace
   token: changeit 
