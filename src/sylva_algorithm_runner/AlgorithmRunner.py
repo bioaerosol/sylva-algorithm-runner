@@ -9,7 +9,6 @@ from sylva_algorithm_runner.repositories.LogRepository import LogRepository
 import json
 import requests
 
-
 class RunSection(Enum):
     """ Enum for the different sections (aka steps) of an algorithm run. """
     ORDER_DATA = "ORDER_DATA"
@@ -102,24 +101,29 @@ class AlgorithmRunner:
 
     def __create_and_prepare_run(self, algorithm_run_order: AlgorithmRunOrder):
         """ Creates a new run and prepares it based on the given AlgorithmRunOrder. """        
-        # start with ordering data as this may take some minutes
+        
+        # start with ordering data as this may take some minutes; API of SYLVA Data Portal is used
         curl_command = ["curl", "-s", "-X", "POST", self.dataportal_configuration["workspace"], "-H", "Content-Type: application/json", "-d", json.dumps({"dataset": algorithm_run_order.dataset, "token": self.dataportal_configuration["token"]})]
         response = self.__run_and_log_section(RunSection.ORDER_DATA, curl_command, return_response_if_success=True)
 
         if response == False:
             raise Exception()
         else:
-            # response might contain our workspace id
+            # response might contain our workspace id if it was not False
             self.workspace_id = json.loads(response)["id"]
             self.log_repository.log_workspace_id(self.pid, self.workspace_id)
         
-        # Clone algorithm from foreign repository
+
+
+        # Clone algorithm from foreign algorithm repository
         clone_command = ["git", "clone", "-c", "advice.detachedHead=false", "--branch", f"{algorithm_run_order.algorithmVersion}", f"https://github.com/{algorithm_run_order.algorithmRepository}.git", f"{self.working_dir}"]
         section_success = self.__run_and_log_section(RunSection.CLONE, clone_command)
         
         if not section_success:
             raise Exception()
         
+
+
         # Build algorithm docker image
         docker_build_algorithm_image = ["docker", "build", "-t", self.algorithm_docker_image_name, "."]
         section_success = self.__run_and_log_section(RunSection.BUILD_ALGORITHM_IMAGE, docker_build_algorithm_image)
@@ -127,6 +131,8 @@ class AlgorithmRunner:
         if not section_success:
             raise Exception()
         
+
+
         # Build run docker image (based on algorithm docker image + own extension to make it work); Dockerfile for this is part of this package
         with open('/var/lib/sylva-algorithm-runner/Dockerfile.template', 'r') as file:
             dockerfile_template = file.read()
@@ -155,12 +161,15 @@ class AlgorithmRunner:
         if not section_success:
             raise Exception()
         
+
         
         docker_logs = ["docker", "logs", "--follow", "algorithm_container"]
         section_success = self.__run_and_log_section(RunSection.RUN_ALGORITHM, docker_logs)
         if not section_success:
             raise Exception()
         
+
+
         # block until containers stop, then print exit codes which must be "0" for success
         docker_wait = ["docker", "wait", "algorithm_container"]
         section_success = self.__run_and_log_section(RunSection.WAIT_FOR_ALGORITHM, docker_wait, return_response_if_success=True)
@@ -170,6 +179,8 @@ class AlgorithmRunner:
             self.log_repository.end_section(self.pid, RunSection.RUN_ALGORITHM, Status.FAILURE)
             raise Exception()
         
+
+
         # Get the results
         output_folder = os.path.join(self.runner_configuration['output'], self.pid)
         os.makedirs(output_folder)
@@ -178,6 +189,8 @@ class AlgorithmRunner:
 
         if not section_success:
             raise Exception()
+
+
 
         # last step: clean-up
         section_success = self.__clean()
