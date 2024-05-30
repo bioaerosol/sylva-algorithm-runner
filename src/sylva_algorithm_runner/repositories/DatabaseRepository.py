@@ -24,11 +24,17 @@ class DatabaseRepository:
 
         return added
 
-
     def get_algorithm_run_orders_raw(self, projection = None) -> list:
-        """ Returns all algorithm run orders. """
+        """ Returns all algorithm run orders as noted in database. It's up to caller to do right projection. """
         return list(self.__get_algorithm_run_order_collection().find({}, projection=projection))
-
+    
+    def get_algorithm_runs_raw(self, run_order_id: str, projection = None) -> list:
+        """ Returns all algorithm runs for the given algorithm run order as noted in database. It's up to caller to do right projection. """
+        return list(self.__get_algorithm_run_collection().find({ "runOrder": ObjectId(run_order_id) }, projection=projection))
+    
+    def get_algorithm_run_raw(self, run_order_id: str, run_id: str, projection = None) -> list:
+        """ Returns the requested algorithm run for the given algorithm run order as noted in database. It's up to caller to do right projection. """
+        return self.__get_algorithm_run_collection().find_one({ "runOrder": ObjectId(run_order_id), "_id": ObjectId(run_id) }, projection=projection)
 
     def get_algorithm_run_order_in_status_created(self, id: str) -> AlgorithmRunOrder:
         """ Returns the algorithm run order with the given id if it is in status CREATED. """
@@ -47,3 +53,6 @@ class DatabaseRepository:
 
     def __get_algorithm_run_order_collection(self):
         return self.mongo_client.sylva.algorithmRunOrders
+    
+    def __get_algorithm_run_collection(self):
+        return self.mongo_client.sylva.algorithmRuns
