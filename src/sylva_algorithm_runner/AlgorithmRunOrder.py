@@ -79,7 +79,7 @@ class AlgorithmRunOrder():
                 algorithmVersion = yaml_source['algorithm']['version']
 
             if 'dataset' in yaml_source:
-                dataset = yaml_source['dataset']['id']
+                dataset = yaml_source['dataset']['name']
 
         except Exception as e:
             # no-op by intention
