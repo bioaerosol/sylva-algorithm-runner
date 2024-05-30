@@ -36,24 +36,22 @@ class AlgorithmRunner:
     dataportal_configuration = None
     runner_configuration = None
     database_configuration = None
-
-    pid = None
     log_repository = None
+
     algorithm_docker_image_name = None
     run_docker_image_name = None
     workspace_id = None
 
 
-    def __init__(self, runner_configuration, dataportal_configuration, database_configuration, pid): 
+    def __init__(self, runner_configuration, dataportal_configuration, database_configuration): 
         self.dataportal_configuration = dataportal_configuration
         self.runner_configuration = runner_configuration
         self.database_configuration = database_configuration
+        self.log_repository = LogRepository(self.database_configuration, True)
 
-        self.__init_process(pid)
 
-    def __init_process(self, pid: str, workspace_id: str = None):
+    def __init_run(self, pid: str, workspace_id: str = None):
         self.pid = pid
-        self.log_repository = LogRepository(self.database_configuration, pid, True)
         self.algorithm_docker_image_name = f"{self.pid}-algorithm:latest"
         self.run_docker_image_name = f"{self.pid}-run:latest"
         self.working_dir = os.path.join(self.runner_configuration["path"], self.pid)
@@ -66,45 +64,44 @@ class AlgorithmRunner:
 
         try:
             if (existing_run is None):
-                # first time we run this algorithm    
+                # first time we run this algorithm
+                id = self.log_repository.start_run(algorithm_run_order)
+                self.__init_run(id)
+                
+                os.makedirs(self.working_dir)
+
                 self.__create_and_prepare_run(algorithm_run_order)
-                self.log_repository.start_section(RunSection.WAIT_FOR_DATA)
+                self.log_repository.start_section(self.pid, RunSection.WAIT_FOR_DATA)
 
             else:
-                self.__init_process(existing_run["pid"], existing_run["workspace"])
+                self.__init_run(str(existing_run["_id"]), existing_run["workspace"])
                 self.workspace_id = existing_run["workspace"]
             
-
             data_available = self.__check_data_available()
             
             if (not data_available):
-                self.log_repository.set_status(Status.WAITING_FOR_DATA)
+                self.log_repository.set_status(self.pid, Status.WAITING_FOR_DATA)
             else:
 
                 workspace_path = os.path.join(self.runner_configuration['workspace'], self.workspace_id)
                     
                 if not os.path.exists(workspace_path):
-                    self.log_repository.append_log(RunSection.WAIT_FOR_DATA, "Workspace not found where expected.")
-                    self.log_repository.end_section(RunSection.WAIT_FOR_DATA, Status.FAILURE)
+                    self.log_repository.append_log(self.pid, RunSection.WAIT_FOR_DATA, "Workspace not found where expected.")
+                    self.log_repository.end_section(self.pid, RunSection.WAIT_FOR_DATA, Status.FAILURE)
                     raise Exception()
                 
                 else:
-                    self.log_repository.end_section(RunSection.WAIT_FOR_DATA, Status.SUCCESS)
-                    self.log_repository.set_status(Status.RUNNING)
+                    self.log_repository.end_section(self.pid, RunSection.WAIT_FOR_DATA, Status.SUCCESS)
+                    self.log_repository.set_status(self.pid, Status.RUNNING)
                     self.__run_algorithm(workspace_path)
 
         except:
             self.__clean()
-            self.log_repository.end_run(Status.FAILURE)
+            self.log_repository.end_run(self.pid, Status.FAILURE)
 
 
     def __create_and_prepare_run(self, algorithm_run_order: AlgorithmRunOrder):
-        """ Creates a new run and prepares it based on the given AlgorithmRunOrder. """
-
-        self.log_repository.start_run(algorithm_run_order)
-        os.makedirs(self.working_dir)
-
-        
+        """ Creates a new run and prepares it based on the given AlgorithmRunOrder. """        
         # start with ordering data as this may take some minutes
         curl_command = ["curl", "-s", "-X", "POST", self.dataportal_configuration["workspace"], "-H", "Content-Type: application/json", "-d", json.dumps({"dataset": algorithm_run_order.dataset, "token": self.dataportal_configuration["token"]})]
         response = self.__run_and_log_section(RunSection.ORDER_DATA, curl_command, return_response_if_success=True)
@@ -114,7 +111,7 @@ class AlgorithmRunner:
         else:
             # response might contain our workspace id
             self.workspace_id = json.loads(response)["id"]
-            self.log_repository.log_workspace_id(self.workspace_id)
+            self.log_repository.log_workspace_id(self.pid, self.workspace_id)
         
         # Clone algorithm from foreign repository
         clone_command = ["git", "clone", "-c", "advice.detachedHead=false", "--branch", f"{algorithm_run_order.algorithmVersion}", f"https://github.com/{algorithm_run_order.algorithmRepository}.git", f"{self.working_dir}"]
@@ -170,7 +167,7 @@ class AlgorithmRunner:
         
         if section_success == False or section_success.strip() != "0":
             # set status of RUN_ALGORITHM manually as __run_and_log_section is not able to detect the exit code
-            self.log_repository.end_section(RunSection.RUN_ALGORITHM, Status.FAILURE)
+            self.log_repository.end_section(self.pid, RunSection.RUN_ALGORITHM, Status.FAILURE)
             raise Exception()
         
         # Get the results
@@ -178,7 +175,7 @@ class AlgorithmRunner:
 
         # last step: clean-up
         section_success = self.__clean()
-        self.log_repository.end_run(Status.SUCCESS if section_success else Status.FAILURE)
+        self.log_repository.end_run(self.pid, Status.SUCCESS if section_success else Status.FAILURE)
         
         return section_success
 
@@ -201,18 +198,18 @@ class AlgorithmRunner:
 
     def __run_and_log_section(self, run_section: RunSection, command: list, return_response_if_success: bool = False):
         """ Runs a command and logs the output to the given run_section in database. """
-        self.log_repository.start_section(run_section)
+        self.log_repository.start_section(self.pid, run_section)
         
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, universal_newlines=True, cwd=self.working_dir, bufsize=1)
 
         response = ""
         for line in iter(process.stdout.readline, ""):
             response += line
-            self.log_repository.append_log(run_section, line)      
+            self.log_repository.append_log(self.pid, run_section, line)      
 
         process.communicate()
         
-        self.log_repository.end_section(run_section, Status.SUCCESS if process.returncode == 0 else Status.FAILURE)
+        self.log_repository.end_section(self.pid, run_section, Status.SUCCESS if process.returncode == 0 else Status.FAILURE)
 
         if return_response_if_success and process.returncode == 0:
             return response
@@ -229,13 +226,13 @@ class AlgorithmRunner:
             data = response.json()
 
             if (data.get("status") == "expired"):
-                self.log_repository.append_log(RunSection.WAIT_FOR_DATA, "Requested data is not available anymore.")
-                self.log_repository.end_section(RunSection.WAIT_FOR_DATA, Status.FAILURE)
+                self.log_repository.append_log(self.pid, RunSection.WAIT_FOR_DATA, "Requested data is not available anymore.")
+                self.log_repository.end_section(self.pid, RunSection.WAIT_FOR_DATA, Status.FAILURE)
                 raise Exception()
             
             if data.get("status") == "provided":
-                self.log_repository.append_log(RunSection.WAIT_FOR_DATA, "Data provided.")
+                self.log_repository.append_log(self.pid, RunSection.WAIT_FOR_DATA, "Data provided.")
                 return True
             
-        self.log_repository.append_log(RunSection.WAIT_FOR_DATA, "Requested data not available yet.")
+        self.log_repository.append_log(self.pid, RunSection.WAIT_FOR_DATA, "Requested data not available yet.")
         return False
