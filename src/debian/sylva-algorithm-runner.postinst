@@ -28,6 +28,13 @@ case "$1" in
 
     chown sylva /etc/sylva-algorithm-runner/config.yaml
     chmod 0600 /etc/sylva-algorithm-runner/config.yaml
+
+    mkdir -p /var/log/sylva-algorithm-runner
+    chown sylva.root /var/log/sylva-algorithm-runner
+    chmod g+w /var/log/sylva-algorithm-runner
+    chmod g+s /var/log/sylva-algorithm-runner
+
+    chmod 0644 /etc/logrotate.d/sylva-algorithm-runner
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

@@ -1,0 +1,8 @@
+/var/log/sylva-algorithm-runner/sylva-algorithm-runner-*.log {
+  weekly
+  missingok
+  rotate 250
+  compress
+  delaycompress
+  create 0644 sylva root
+}
