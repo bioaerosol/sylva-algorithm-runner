@@ -30,7 +30,7 @@ case "$1" in
     chmod 0600 /etc/sylva-algorithm-runner/config.yaml
 
     mkdir -p /var/log/sylva-algorithm-runner
-    chown sylva.root /var/log/sylva-algorithm-runner
+    chown sylva:root /var/log/sylva-algorithm-runner
     chmod g+w /var/log/sylva-algorithm-runner
     chmod g+s /var/log/sylva-algorithm-runner
 
