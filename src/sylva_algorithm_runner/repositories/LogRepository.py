@@ -17,7 +17,7 @@ class LogRepository:
 
 
     def __get_algorithm_runs_collection(self):
-        return self.mongo_client.sylva.algorithmRuns
+        return self.mongo_client[self.configuration["database"]].algorithmRuns
 
     def get_waiting_for_data(self, algorithm_run_order: AlgorithmRunOrder):
         return self.__get_algorithm_runs_collection().find_one({"status": "WAITING_FOR_DATA", "runOrder": algorithm_run_order._id})

@@ -6,6 +6,7 @@ database:
   port: 27017
   user: sylva
   password: changeit
+  database: algorithm
 runner:
   upgrade-run-orders-enabled: false
   path: changeit

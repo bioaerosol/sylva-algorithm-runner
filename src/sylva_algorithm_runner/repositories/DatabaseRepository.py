@@ -52,7 +52,7 @@ class DatabaseRepository:
 
 
     def __get_algorithm_run_order_collection(self):
-        return self.mongo_client.sylva.algorithmRunOrders
+        return self.mongo_client[self.configuration["database"]].algorithmRunOrders
     
     def __get_algorithm_run_collection(self):
-        return self.mongo_client.sylva.algorithmRuns
+        return self.mongo_client[self.configuration["database"]].algorithmRuns
