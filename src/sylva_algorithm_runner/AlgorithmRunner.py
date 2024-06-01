@@ -81,9 +81,8 @@ class AlgorithmRunner:
             if (not data_available):
                 self.log_repository.set_status(self.pid, Status.WAITING_FOR_DATA)
             else:
-
-                workspace_path = os.path.join(self.runner_configuration['workspace'], self.workspace_id)
-                    
+                workspace_path = self.runner_configuration['workspace']
+                
                 if not os.path.exists(workspace_path):
                     self.log_repository.append_log(self.pid, RunSection.WAIT_FOR_DATA, "Workspace not found where expected.")
                     self.log_repository.end_section(self.pid, RunSection.WAIT_FOR_DATA, Status.FAILURE)
@@ -138,6 +137,7 @@ class AlgorithmRunner:
             dockerfile_template = file.read()
 
         dockerfile_content = dockerfile_template.replace('{{pid}}', self.pid)
+        dockerfile_content = dockerfile_content.replace('{{workspaceId}}', self.workspace_id)
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             with open(os.path.join(tmpdirname, "Dockerfile"), "w") as dockerfile:
@@ -154,7 +154,7 @@ class AlgorithmRunner:
     def __run_algorithm(self, workspace_path: str):
         # Run the algorithm
         
-        mountpoint = f"type=bind,source={workspace_path},destination=/data/input/,readonly"
+        mountpoint = f"type=bind,source={workspace_path},destination=/data/workspace/,readonly"
         docker_run = ["docker", "run", "--mount", mountpoint, "-d", "--name", "algorithm_container", self.run_docker_image_name]
         section_success = self.__run_and_log_section(RunSection.START_ALGORITHM, docker_run)
 

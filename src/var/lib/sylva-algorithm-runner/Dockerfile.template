@@ -1,6 +1,7 @@
 FROM {{pid}}-algorithm:latest
 
-RUN useradd -u 4225293 sylva
+RUN useradd -u 4225293 sylva && \
+    ln -s /data/workspace/{{workspaceId}} /data/input
 
 USER sylva
 CMD ["startAlgorithm"]
