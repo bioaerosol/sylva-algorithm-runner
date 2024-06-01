@@ -1,1 +1,1 @@
-0 * * * *  sylva   flock -n /var/lock/sylva-algorithm-upgrade-run-orders -c "sylva-algorithm-upgrade-run-orders" 1>> /var/log/sylva-algorithm-runner/sylva-algorithm-upgrade-run-orders.log 2>> /var/log/sylva-algorithm-runner/sylva-algorithm-upgrade-run-orders-error.log
+28 * * * *  sylva   flock -n /var/lock/sylva-algorithm-upgrade-run-orders -c "sylva-algorithm-upgrade-run-orders" 1>> /var/log/sylva-algorithm-runner/sylva-algorithm-upgrade-run-orders.log 2>> /var/log/sylva-algorithm-runner/sylva-algorithm-upgrade-run-orders-error.log
