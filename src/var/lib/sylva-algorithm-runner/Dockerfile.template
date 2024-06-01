@@ -1,3 +1,6 @@
 FROM {{pid}}-algorithm:latest
 
+RUN useradd -u 4225293 sylva
+
+USER sylva
 CMD ["startAlgorithm"]
