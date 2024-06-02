@@ -26,8 +26,8 @@ case "$1" in
     ln -fs /etc/apache2/sites-available/sylva-algorithm-runner.conf /etc/apache2/sites-enabled/sylva-algorithm-runner.conf
     service apache2 reload
 
-    chown sylva /etc/sylva-algorithm-runner/config.yaml
-    chmod 0600 /etc/sylva-algorithm-runner/config.yaml
+    chown sylva:www-data /etc/sylva-algorithm-runner/config.yaml
+    chmod 0640 /etc/sylva-algorithm-runner/config.yaml
 
     mkdir -p /var/log/sylva-algorithm-runner
     chown sylva:root /var/log/sylva-algorithm-runner
