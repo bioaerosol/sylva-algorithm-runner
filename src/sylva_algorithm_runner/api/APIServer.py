@@ -21,7 +21,7 @@ class APIServer:
         return JSONEncoder().encode(self.database_repository.get_algorithm_runs_raw(run_order_id, { "_id": 1, "start": 1, "status": 1, "end": 1 }))
     
     def __get_algorithm_run(self, run_order_id: str, run_id: str):
-        return JSONEncoder().encode(self.database_repository.get_algorithm_run_raw(run_order_id, run_id, { "_id": 1, "start": 1, "status": 1, "end": 1, "sections": 1 }))
+        return JSONEncoder().encode(self.database_repository.get_algorithm_run_raw(run_order_id, run_id, { "_id": 1, "start": 1, "status": 1, "end": 1, "sections": 1, "outputFiles": 1 }))
 
 
     def create_application(self, before_request_hook=None, after_request_hook=None):

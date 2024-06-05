@@ -190,7 +190,16 @@ class AlgorithmRunner:
         if not section_success:
             raise Exception()
 
+        # log the output files
+        file_list = []
+        for root, dirs, files in os.walk(output_folder):
+            for file in files:
+                file_path = os.path.join(root, file)
+                file_size = os.path.getsize(file_path)
+                file_info = {"fileName": file, "filePath": file_path[len(output_folder)+1:], "fileSize": file_size}
+                file_list.append(file_info)
 
+        self.log_repository.log_output_files(self.pid, file_list)
 
         # last step: clean-up
         section_success = self.__clean()

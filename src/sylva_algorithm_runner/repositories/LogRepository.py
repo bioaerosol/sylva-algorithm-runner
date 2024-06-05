@@ -42,6 +42,13 @@ class LogRepository:
             {"$set": {"status": status.value}}
         )
 
+    def log_output_files(self, pid: str, output_files: list):
+        algorithm_runs_collection = self.__get_algorithm_runs_collection()
+        algorithm_runs_collection.update_one(
+            {"_id": ObjectId(pid)},
+            {"$set": {"outputFiles": output_files}}
+        )
+
     def append_log(self, pid: str, run_section: object, log_line: str):
         if (self.log_to_stdout):
             print(log_line)
