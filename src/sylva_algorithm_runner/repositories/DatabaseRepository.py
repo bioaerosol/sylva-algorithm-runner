@@ -51,6 +51,10 @@ class DatabaseRepository:
         self.__get_algorithm_run_order_collection().update_one({"_id": ObjectId(id)}, {"$set": {"status": status.value}})
 
 
+    def has_file(self, run_order_id: str, run_id: str, file_path: str) -> bool:
+        """ Checks if the given file is present in the database. """
+        return self.__get_algorithm_run_collection().find_one({ "runOrder": ObjectId(run_order_id), "_id": ObjectId(run_id), "outputFiles": {"$elemMatch": {"filePath": file_path}} }) is not None
+
     def __get_algorithm_run_order_collection(self):
         return self.mongo_client[self.configuration["database"]].algorithmRunOrders
     
