@@ -9,6 +9,7 @@ database:
   database: algorithm
 runner:
   upgrade-run-orders-enabled: false
+  run-autostart-enabled: false
   path: changeit
   workspace: /mnt/changeit
   output: changeit

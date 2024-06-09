@@ -45,15 +45,50 @@ class DatabaseRepository:
 
         return AlgorithmRunOrder.from_dict(object) if object is not None else None
     
-
     def update_algorithm_run_order_status(self, id: str, status: AlgorithmRunOrderStatus):
         """ Updates the status of the algorithm run order with the given id. """
         self.__get_algorithm_run_order_collection().update_one({"_id": ObjectId(id)}, {"$set": {"status": status.value}})
 
-
     def has_file(self, run_order_id: str, run_id: str, file_path: str) -> bool:
         """ Checks if the given file is present in the database. """
         return self.__get_algorithm_run_collection().find_one({ "runOrder": ObjectId(run_order_id), "_id": ObjectId(run_id), "outputFiles": {"$elemMatch": {"filePath": file_path}} }) is not None
+
+    def find_next_to_run_id(self) -> str:
+        """ Returns the id of the next algorithm run order to run. This is either a run order with no algorithm runs or an algorithm run in status WAITING_FOR_DATA."""
+        results = self.__get_algorithm_run_order_collection().aggregate([
+            {
+                "$lookup": {
+                "from": "algorithmRuns",
+                "localField": "_id",
+                "foreignField": "runOrder",
+                "as": "algorithmRuns"
+                }
+            },
+            {
+                "$match": {
+                    "$and": [
+                        { "status": "CREATED" },
+                        { "$or": [
+                            {
+                                'algorithmRuns.status': 'WAITING_FOR_DATA'
+                            },
+                            {
+                                "algorithmRuns": {
+                                    "$size": 0
+                                }
+                            }
+                            ]}
+                    ]
+                }
+            },
+            {
+                "$project": {
+                "_id": 1
+                }
+            }
+        ])
+
+        return next((str(result['_id']) for result in results), None)
 
     def __get_algorithm_run_order_collection(self):
         return self.mongo_client[self.configuration["database"]].algorithmRunOrders
