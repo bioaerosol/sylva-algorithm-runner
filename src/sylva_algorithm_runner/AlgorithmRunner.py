@@ -37,6 +37,7 @@ class AlgorithmRunner:
     database_configuration = None
     log_repository = None
 
+    algorithm_container_name = None
     algorithm_docker_image_name = None
     run_docker_image_name = None
     workspace_id = None
@@ -53,6 +54,7 @@ class AlgorithmRunner:
 
     def __init_run(self, pid: str, workspace_id: str = None):
         self.pid = pid
+        self.algorithm_container_name = f"{self.pid}-algorithm_container"
         self.algorithm_docker_image_name = f"{self.pid}-algorithm:latest"
         self.run_docker_image_name = f"{self.pid}-run:latest"
         self.working_dir = os.path.join(self.runner_configuration["path"], self.pid)
@@ -169,7 +171,7 @@ class AlgorithmRunner:
         # Run the algorithm
         
         mountpoint = f"type=bind,source={workspace_path},destination=/data/workspace/,readonly"
-        docker_run = ["docker", "run", "--mount", mountpoint, "-d", "--name", "algorithm_container", self.run_docker_image_name]
+        docker_run = ["docker", "run", "--mount", mountpoint, "-d", "--name", self.algorithm_container_name, self.run_docker_image_name]
         section_success = self.__run_and_log_section(RunSection.START_ALGORITHM, docker_run)
 
         if not section_success:
@@ -177,7 +179,7 @@ class AlgorithmRunner:
         
 
         
-        docker_logs = ["docker", "logs", "--follow", "algorithm_container"]
+        docker_logs = ["docker", "logs", "--follow", self.algorithm_container_name]
         section_success = self.__run_and_log_section(RunSection.RUN_ALGORITHM, docker_logs)
         if not section_success:
             raise Exception()
@@ -185,7 +187,7 @@ class AlgorithmRunner:
 
 
         # block until containers stop, then print exit codes which must be "0" for success
-        docker_wait = ["docker", "wait", "algorithm_container"]
+        docker_wait = ["docker", "wait", self.algorithm_container_name]
         section_success = self.__run_and_log_section(RunSection.WAIT_FOR_ALGORITHM, docker_wait, return_response_if_success=True)
         
         if section_success == False or section_success.strip() != "0":
@@ -198,7 +200,7 @@ class AlgorithmRunner:
         # Get the results
         output_folder = os.path.join(self.runner_configuration['output'], self.pid)
         os.makedirs(output_folder)
-        copy_output = ["docker", "cp", "algorithm_container:/data/output/.", output_folder]
+        copy_output = ["docker", "cp", f"{self.algorithm_container_name}:/data/output/.", output_folder]
         section_success = self.__run_and_log_section(RunSection.COPY_OUTPUT, copy_output)
 
         if not section_success:
@@ -224,7 +226,7 @@ class AlgorithmRunner:
 
     def __clean(self):
         """ Cleans up after running an algorithm. Removes the working directory and the docker images. """
-        remove_algorithm_container = ["docker", "rm", "algorithm_container"]
+        remove_algorithm_container = ["docker", "rm", self.algorithm_container_name]
         success3 = self.__run_and_log_section(RunSection.CLEANUP, remove_algorithm_container)
 
         remove_algorithm_run_image = ["docker", "rmi", self.run_docker_image_name]
