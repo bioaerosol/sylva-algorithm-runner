@@ -42,10 +42,12 @@ class AlgorithmRunner:
     workspace_id = None
 
 
-    def __init__(self, runner_configuration, dataportal_configuration, database_configuration): 
+    def __init__(self, runner_configuration, dataportal_configuration, database_configuration, security_configuration): 
         self.dataportal_configuration = dataportal_configuration
         self.runner_configuration = runner_configuration
         self.database_configuration = database_configuration
+        self.security_configuration = security_configuration
+
         self.log_repository = LogRepository(self.database_configuration, True)
 
 
@@ -76,15 +78,20 @@ class AlgorithmRunner:
                 self.__init_run(str(existing_run["_id"]), existing_run["workspace"])
                 self.workspace_id = existing_run["workspace"]
             
-            data_available = self.__check_data_available()
+            data_available = (algorithm_run_order.localpath is not None) or self.__check_data_available()
             
             if (not data_available):
                 self.log_repository.set_status(self.pid, Status.WAITING_FOR_DATA)
             else:
-                workspace_path = self.runner_configuration['workspace']
+                if (not self.security_configuration["accept-local-path"] and algorithm_run_order.localpath is not None):
+                    self.log_repository.append_log(self.pid, RunSection.WAIT_FOR_DATA, "Local paths are not allowed in this environment.")
+                    self.log_repository.end_section(self.pid, RunSection.WAIT_FOR_DATA, Status.FAILURE)
+                    raise Exception()
+                
+                workspace_path = algorithm_run_order.localpath if algorithm_run_order.localpath is not None else self.runner_configuration['workspace']
                 
                 if not os.path.exists(workspace_path):
-                    self.log_repository.append_log(self.pid, RunSection.WAIT_FOR_DATA, "Workspace not found where expected.")
+                    self.log_repository.append_log(self.pid, RunSection.WAIT_FOR_DATA, f"Workspace not found where expected at {workspace_path}.")
                     self.log_repository.end_section(self.pid, RunSection.WAIT_FOR_DATA, Status.FAILURE)
                     raise Exception()
                 
@@ -101,9 +108,16 @@ class AlgorithmRunner:
     def __create_and_prepare_run(self, algorithm_run_order: AlgorithmRunOrder):
         """ Creates a new run and prepares it based on the given AlgorithmRunOrder. """        
         
-        # start with ordering data as this may take some minutes; API of SYLVA Data Portal is used
-        curl_command = ["curl", "-s", "-X", "POST", self.dataportal_configuration["workspace"], "-H", "Content-Type: application/json", "-d", json.dumps({"dataset": algorithm_run_order.dataset, "token": self.dataportal_configuration["token"]})]
-        response = self.__run_and_log_section(RunSection.ORDER_DATA, curl_command, return_response_if_success=True)
+        # start with ordering data as this may take some minutes
+        if (algorithm_run_order.dataset is not None):
+            # in case of dataset, API of SYLVA Data Portal is used
+            curl_command = ["curl", "-s", "-X", "POST", self.dataportal_configuration["workspace"], "-H", "Content-Type: application/json", "-d", json.dumps({"dataset": algorithm_run_order.dataset, "token": self.dataportal_configuration["token"]})]
+            response = self.__run_and_log_section(RunSection.ORDER_DATA, curl_command, return_response_if_success=True)
+        
+        elif (algorithm_run_order.localpath is not None):
+            # in case of localpath, the data is already there, no workspace ID is needed as the given path is the final path to use
+            response = '{ "id": "" }'
+
 
         if response == False:
             raise Exception()

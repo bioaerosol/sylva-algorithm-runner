@@ -20,20 +20,21 @@ class AlgorithmRunOrder():
     algorithmVersion: str = None
 
     dataset: str = None
+    localpath: str = None
 
-
-    def __init__(self, source_id: str, source: dict, algorithm: str, algorithm_repository: str, algorithm_version: str, dataset_id: str, _id: str = None) -> None:
+    def __init__(self, source_id: str, source: dict, algorithm: str, algorithm_repository: str, algorithm_version: str, dataset_id: str, localpath: str, _id: str = None) -> None:
         self.sourceId = source_id
         self.source = source
         self.algorithm = algorithm
         self.algorithmRepository = algorithm_repository
         self.algorithmVersion = algorithm_version
         self.dataset = dataset_id
+        self.localpath = localpath
         self._id = _id
 
 
     def is_valid(self) -> bool:
-        return self.algorithm is not None and self.algorithmRepository is not None and self.algorithmVersion is not None and self.dataset is not None
+        return self.algorithm is not None and self.algorithmRepository is not None and self.algorithmVersion is not None and (self.dataset is not None) != (self.localpath is not None)
 
 
     def to_dict(self) -> dict:
@@ -44,7 +45,8 @@ class AlgorithmRunOrder():
             'algorithm': self.algorithm,
             'algorithmRepository': self.algorithmRepository,
             'algorithmVersion': self.algorithmVersion,
-            'dataset': self.dataset
+            'dataset': self.dataset,
+            'localpath': self.localpath
         }
     
 
@@ -58,9 +60,11 @@ class AlgorithmRunOrder():
         algorithm_version = data.get('algorithmVersion')
 
         dataset_id = data.get('dataset')
+        localpath = data.get('localpath')
+
         _id = data.get('_id')
 
-        return AlgorithmRunOrder(source_id, source, algorithm, algorithm_repository, algorithm_version, dataset_id, _id)
+        return AlgorithmRunOrder(source_id, source, algorithm, algorithm_repository, algorithm_version, dataset_id, localpath, _id)
     
     
     @staticmethod
@@ -69,6 +73,7 @@ class AlgorithmRunOrder():
         algorithmRepository = None
         algorithmVersion = None
         dataset = None
+        localpath = None
 
         try:
             yaml_source = yaml.safe_load(source)
@@ -79,10 +84,11 @@ class AlgorithmRunOrder():
                 algorithmVersion = yaml_source['algorithm']['version']
 
             if 'dataset' in yaml_source:
-                dataset = yaml_source['dataset']['name']
+                dataset = yaml_source['dataset']['name'] if 'name' in yaml_source['dataset'] else None         
+                localpath = yaml_source['dataset']['localpath'] if 'localpath' in yaml_source['dataset'] else None
 
         except Exception as e:
             # no-op by intention
             pass
 
-        return AlgorithmRunOrder(source_id, source, algorithm, algorithmRepository, algorithmVersion, dataset)
+        return AlgorithmRunOrder(source_id, source, algorithm, algorithmRepository, algorithmVersion, dataset, localpath)

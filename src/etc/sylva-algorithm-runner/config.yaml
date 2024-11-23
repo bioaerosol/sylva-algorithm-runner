@@ -16,3 +16,5 @@ runner:
 dataportal:
   workspace: https://data.sylva.bioaerosol.eu/api/workspace
   token: changeit 
+security:
+  accept-local-path: false
