@@ -2,6 +2,7 @@
 from sylva_algorithm_runner import AlgorithmRunOrder, AlgorithmRunOrderStatus
 from bson import ObjectId
 from pymongo import MongoClient
+import typing
 
 class DatabaseRepository:
     """ Class to handle database operations. """
@@ -53,7 +54,7 @@ class DatabaseRepository:
         """ Checks if the given file is present in the database. """
         return self.__get_algorithm_run_collection().find_one({ "runOrder": ObjectId(run_order_id), "_id": ObjectId(run_id), "outputFiles": {"$elemMatch": {"filePath": file_path}} }) is not None
 
-    def find_next_to_run_id(self) -> str:
+    def find_next_to_run_id(self, count) -> typing.List[str]:
         """ Returns the id of the next algorithm run order to run. This is either a run order with no algorithm runs or an algorithm run in status WAITING_FOR_DATA."""
         results = self.__get_algorithm_run_order_collection().aggregate([
             {
@@ -85,10 +86,13 @@ class DatabaseRepository:
                 "$project": {
                 "_id": 1
                 }
+            },
+            {
+                "$limit": count
             }
         ])
 
-        return next((str(result['_id']) for result in results), None)
+        return [str(result['_id']) for result in results]
 
     def __get_algorithm_run_order_collection(self):
         return self.mongo_client[self.configuration["database"]].algorithmRunOrders

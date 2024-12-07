@@ -22,14 +22,18 @@ print("{0} - {1} - START - Getting next algorithm to run.".format(datetime.now()
 if (configuration.get("runner")["run-autostart-enabled"] == True or args.overrideEnabled == True):
     max_runs_in_parallel = configuration.get("runner")["parallel"]
 
-    for i in range(max_runs_in_parallel):
-        id_to_run = database_repository.find_next_to_run_id()
+    ids_to_run = database_repository.find_next_to_run_id(max_runs_in_parallel)
 
-        if id_to_run is None:
-            print("No run to execute")
-            exit(0)
+    processes = []
+    for id_to_run in ids_to_run:
+        print("{0} - {1} - INFO - Starting {2}.".format(datetime.now().isoformat(), process_id, id_to_run))
+        process = subprocess.Popen(["sylva-algorithm-run", id_to_run])
+        processes.append(process)
 
-        subprocess.run(["sylva-algorithm-run", id_to_run])
+    for process in processes:
+        process.wait()
+
+    print("{0} - {1} - END - Process finished.".format(datetime.now().isoformat(), process_id))
 
 else:
      print("{0} - {1} - END - Process skipped as run-autostart is set to False.".format(datetime.now().isoformat(), process_id))
