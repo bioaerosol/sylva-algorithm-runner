@@ -70,6 +70,9 @@ class DatabaseRepository:
                     }
                 },
                 {
+                    "$sort": { 'algorithmRuns.status' : -1 }
+                },
+                {
                     "$match": {
                         "$and": [
                             { "status": "CREATED" },
