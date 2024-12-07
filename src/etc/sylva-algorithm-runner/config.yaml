@@ -13,6 +13,7 @@ runner:
   path: changeit
   workspace: /mnt/changeit
   output: changeit
+  parallel: 1
 dataportal:
   workspace: https://data.sylva.bioaerosol.eu/api/workspace
   token: changeit 
