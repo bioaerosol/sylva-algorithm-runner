@@ -56,43 +56,49 @@ class DatabaseRepository:
 
     def find_next_to_run_id(self, count) -> typing.List[str]:
         """ Returns the id of the next algorithm run order to run. This is either a run order with no algorithm runs or an algorithm run in status WAITING_FOR_DATA."""
-        results = self.__get_algorithm_run_order_collection().aggregate([
-            {
-                "$lookup": {
-                "from": "algorithmRuns",
-                "localField": "_id",
-                "foreignField": "runOrder",
-                "as": "algorithmRuns"
-                }
-            },
-            {
-                "$match": {
-                    "$and": [
-                        { "status": "CREATED" },
-                        { "$or": [
-                            {
-                                'algorithmRuns.status': 'WAITING_FOR_DATA'
-                            },
-                            {
-                                "algorithmRuns": {
-                                    "$size": 0
-                                }
-                            }
-                            ]}
-                    ]
-                }
-            },
-            {
-                "$project": {
-                "_id": 1
-                }
-            },
-            {
-                "$limit": count
-            }
-        ])
+        currently_running_count = self.__get_algorithm_run_collection().count_documents({ "status": "RUNNING" })
+        count_left = count - currently_running_count
 
-        return [str(result['_id']) for result in results]
+        if count_left > 0:
+            results = self.__get_algorithm_run_order_collection().aggregate([
+                {
+                    "$lookup": {
+                    "from": "algorithmRuns",
+                    "localField": "_id",
+                    "foreignField": "runOrder",
+                    "as": "algorithmRuns"
+                    }
+                },
+                {
+                    "$match": {
+                        "$and": [
+                            { "status": "CREATED" },
+                            { "$or": [
+                                {
+                                    'algorithmRuns.status': 'WAITING_FOR_DATA'
+                                },
+                                {
+                                    "algorithmRuns": {
+                                        "$size": 0
+                                    }
+                                }
+                                ]}
+                        ]
+                    }
+                },
+                {
+                    "$project": {
+                    "_id": 1
+                    }
+                },
+                {
+                    "$limit": count_left
+                }
+            ])
+
+            return [str(result['_id']) for result in results]
+        else:
+            return []
 
     def __get_algorithm_run_order_collection(self):
         return self.mongo_client[self.configuration["database"]].algorithmRunOrders
