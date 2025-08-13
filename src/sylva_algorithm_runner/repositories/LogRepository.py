@@ -56,7 +56,14 @@ class LogRepository:
         algorithm_runs_collection = self.__get_algorithm_runs_collection()
         algorithm_runs_collection.update_one(
             {"_id": ObjectId(pid)},
-            {"$push": {f"sections.{run_section.value}.log": {"timestamp": datetime.now(timezone.utc), "output": log_line}}}
+            {
+                "$push": {
+                    f"sections.{run_section.value}.log": {
+                        "$each": [{"timestamp": datetime.now(timezone.utc), "output": log_line}],
+                        "$slice": -1000
+                    }
+                }
+            }
         )
 
     def log_workspace_id(self, pid: str, workspace_id: str):
