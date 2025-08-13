@@ -73,6 +73,9 @@ class DatabaseRepository:
                     "$sort": { 'algorithmRuns.status' : -1 }
                 },
                 {
+                    "$sort": { "_id": -1 }
+                },
+                {
                     "$match": {
                         "$and": [
                             { "status": "CREATED" },
