@@ -3,6 +3,7 @@ from sylva_algorithm_runner import AlgorithmRunOrder, AlgorithmRunOrderStatus
 from bson import ObjectId
 from pymongo import MongoClient
 import typing
+import subprocess
 
 class DatabaseRepository:
     """ Class to handle database operations. """
@@ -56,8 +57,24 @@ class DatabaseRepository:
 
     def find_next_to_run_id(self, count) -> typing.List[str]:
         """ Returns the id of the next algorithm run order to run. This is either a run order with no algorithm runs or an algorithm run in status WAITING_FOR_DATA."""
-        currently_running_count = self.__get_algorithm_run_collection().count_documents({ "status": "RUNNING" })
+        
+        def count_local_sylva_algorithm_run_processes():
+            """Counts the number of local Unix processes running 'sylva-algorithm-run'."""
+            try:
+                output = subprocess.check_output(
+                    ["ps", "aux"], universal_newlines=True
+                )
+                lines = [line for line in output.splitlines() if "sylva-algorithm-run " in line]
+                for line in lines:
+                    print(line)
+                return len(lines)
+            except Exception:
+                return 0
+
+        currently_running_count = count_local_sylva_algorithm_run_processes() # currently running count is for local machine
         count_left = count - currently_running_count
+
+        print(f"Currently running processes on local machine: {currently_running_count}, new possible processes: {count_left}.")
 
         if count_left > 0:
             results = self.__get_algorithm_run_order_collection().aggregate([
@@ -102,7 +119,11 @@ class DatabaseRepository:
                 }
             ])
 
-            return [str(result['_id']) for result in results]
+            found = [str(result['_id']) for result in results]
+            
+            print(f"Found {len(found)} algorithm run orders to start.")
+
+            return found
         else:
             return []
 
